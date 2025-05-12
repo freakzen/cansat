@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            margin: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at bottom, #0f172a 0%, #020617 100%);
+            color: #e2e8f0;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Space Particles Background */
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: transparent;
+        }
+
+        /* Mission Control Panel Style */
+        .card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(74, 222, 128, 0.3);
+            border-color: rgba(74, 222, 128, 0.4);
+        }
+
+        .card h2 {
+            color: #5eead4;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2 i {
+            font-size: 1.1rem;
+            color: var(--secondary);
+        }
+
+        /* Sensor-specific colors */
+        #temp-card::before { background: var(--danger); }
+        #pressure-card::before { background: var(--warning); }
+        #altitude-card::before { background: var(--info); }
+        #humidity-card::before { background: var(--secondary); }
+        #map-card::before { background: var(--primary); }
+
+        /* Status indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-normal { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+        .status-warning { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .status-danger { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        /* Dashboard Grid Layout */
+        .dashboard-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .map-card {
+            grid-column: 1 / -1;
+            height: 500px;
+        }
+
+        /* Map container styling */
+        #map {
+            height: 100%;
+            width: 100%;
+            min-height: 450px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        /* Mission Header */
+        .mission-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .mission-header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #5eead4, #38bdf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .mission-header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .mission-tag {
+            display: inline-block;
+            background: rgba(74, 222, 128, 0.2);
+            color: #5eead4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .map-card {
+                height: 350px;
+            }
+            
+            .mission-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div id="particles-js"></div>
+
+<div class="dashboard-container">
+    <div class="mission-header">
+        <h1>KNOX CANSAT MISSION CONTROL</h1>
+        <p>Real-time Telemetry Dashboard</p>
+        <span class="mission-tag">
+            <i class="fas fa-satellite-dish"></i> LIVE MISSION
+        </span>
+    </div>
+    
+    <div class="dashboard-grid">
+        <!-- Temperature Card -->
+        <div class="card graphs-card" id="temp-card">
+            <h2><i class="fas fa-temperature-high"></i> TEMPERATURE</h2>
+            <canvas id="tempChart"></canvas>
+            <div class="mt-2 text-sm">
+                <span class="status-indicator status-normal"></span>
+                <span>Sensor: Online</span>
+            </div>
+        </div>
+        
+        <!-- Pressure Card -->
+        <div class="card graphs-card" id="pressure-card">
+            <h2><i class="fas fa-tachometer-alt"></i> PRESSURE</h2>
+            <canvas id="pressureChart"></canvas>
+            <div class="mt-2 text-sm">
+                <span class="status-indicator status-normal"></span>
+                <span>Sensor: Online</span>
+            </div>
+        </div>
+        
+        <!-- Altitude Card -->
+        <div class="card graphs-card" id="altitude-card">
+            <h2><i class="fas fa-mountain"></i> ALTITUDE</h2>
+            <canvas id="altitudeChart"></canvas>
+            <div class="mt-2 text-sm">
+                <span class="status-indicator status-warning"></span>
+                <span>GPS Altitude: Active</span>
+            </div>
+        </div>
+        
+        <!-- Humidity Card -->
+        <div class="card graphs-card" id="humidity-card">
+            <h2><i class="fas fa-tint"></i> HUMIDITY</h2>
+            <canvas id="humidityChart"></canvas>
+            <div class="mt-2 text-sm">
+                <span class="status-indicator status-normal"></span>
+                <span>Sensor: Online</span>
+            </div>
+        </div>
+        
+        <!-- Map Card -->
+        <div class="card map-card" id="map-card">
+            <h2><i class="fas fa-map-marked-alt"></i> FLIGHT PATH TRACKING</h2>
+            <div id="map"></div>
+            <div class="mt-2 text-sm">
+                <span class="status-indicator status-normal"></span>
+                <span>GPS Lock: 6 Satellites</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize particle.js background
+            particlesJS('particles-js', {
+                "particles": {
+                    "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#5eead4" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.5, "random": true },
+                    "size": { "value": 3, "random": true },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#5eead4", "opacity": 0.2, "width": 1 },
+                    "move": { "enable": true, "speed": 2, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": { "enable": true, "mode": "grab" },
+                        "onclick": { "enable": true, "mode": "push" }
+                    }
+                }
+            });
+            
+            // Initialize charts
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            const pressureCtx = document.getElementById('pressureChart').getContext('2d');
+            const altitudeCtx = document.getElementById('altitudeChart').getContext('2d');
+            const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+            
+            const tempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2
+                }]},
+                options: createChartOptions('Temperature')
+            });
+            
+            const pressureChart = new Chart(pressureCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [{
+                    label: 'Pressure (hPa)',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2
+                }]},
+                options: createChartOptions('Pressure')
+            });
+            
+            const altitudeChart = new Chart(altitudeCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [{
+                    label: 'Altitude (m)',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2
+                }]},
+                options: createChartOptions('Altitude')
+            });
+            
+            const humidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [{
+                    label: 'Humidity (%)',
+                    data: [],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2
+                }]},
+                options: createChartOptions('Humidity')
+            });
+            
+            function createChartOptions(title) {
+                return {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    elements: {
+                        point: { radius: 0 }
+                    }
+                };
+            }
+            
+            
+            
+            // Map Initialization
+            let map;
+            let marker;
+            let pathLayer;
+            let pathPoints = [];
+            let updateInterval;
+
+            function initMap() {
+                // Create map with a default view (will be updated with real data)
+                map = L.map('map').setView([15.3704, 75.1240], 13);
+                
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 18
+                }).addTo(map);
+
+                // Create path layer
+                pathLayer = L.layerGroup().addTo(map);
+                
+                // Create custom satellite icon
+                const satelliteIcon = L.divIcon({
+                    className: 'satellite-marker',
+                    html: '<div style="color: #6d28d9; font-size: 24px;"><i class="fas fa-satellite"></i></div>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                // Create initial marker (will be moved with real data)
+                marker = L.marker([15.3704, 75.1240], {
+                    icon: satelliteIcon,
+                    zIndexOffset: 1000
+                }).addTo(pathLayer);
+
+                // Add initial popup
+                marker.bindPopup("<b>Current Position</b><br>Waiting for GPS data...");
+            }
+
+            // Function to fetch GPS data from server
+            async function fetchGPSData() {
+                try {
+                    const response = await fetch('/api/gps-data');
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+                    
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching GPS data:', error);
+                    document.getElementById('gps-status').textContent = 'GPS Error: ' + error.message;
+                    document.getElementById('gps-status').previousElementSibling.className = 'status-indicator status-danger';
+                    return null;
+                }
+            }
+
+            // Function to update map with new coordinates
+            function updateMap(lat, lng) {
+                if (!map || !marker) return;
+                
+                // Update marker position
+                marker.setLatLng([lat, lng]);
+                marker.getPopup().setContent(`
+                    <b>Current Position</b><br>
+                    Latitude: ${lat.toFixed(6)}<br>
+                    Longitude: ${lng.toFixed(6)}<br>
+                    Updated: ${new Date().toLocaleTimeString()}
+                `).openOn(map);
+                
+                // Add to path
+                pathPoints.push([lat, lng]);
+                if (pathPoints.length > 1) {
+                    // Clear old path and draw new one
+                    pathLayer.clearLayers();
+                    L.polyline(pathPoints, {color: '#6d28d9'}).addTo(pathLayer);
+                    marker.addTo(pathLayer);
+                }
+                
+                // Center map on new position
+                map.setView([lat, lng], 15);
+                
+                // Update status
+                document.getElementById('gps-status').textContent = `GPS Active: ${pathPoints.length} points tracked`;
+                document.getElementById('gps-status').previousElementSibling.className = 'status-indicator status-normal';
+            }
+
+            // Start live updates
+            function startLiveUpdates() {
+                initMap();
+                
+                // Initial fetch
+                fetchGPSData().then(data => {
+                    if (data && data.lat && data.lng) {
+                        updateMap(data.lat, data.lng);
+                    }
+                });
+                
+                // Set up periodic updates
+                updateInterval = setInterval(async () => {
+                    const data = await fetchGPSData();
+                    if (data && data.lat && data.lng) {
+                        updateMap(data.lat, data.lng);
+                    }
+                }, 3000);  // Update every 3 seconds
+            }
+
+            // Start the live updates
+            startLiveUpdates();
+
+            // Clean up on page unload
+            window.addEventListener('beforeunload', () => {
+                if (updateInterval) clearInterval(updateInterval);
+            });
+
+            
+            // Mission-critical animations
+            anime({
+                targets: '.card',
+                opacity: [0, 1],
+                translateY: [40, 0],
+                delay: anime.stagger(100, {start: 300}),
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+
+            anime({
+                targets: '.mission-header h1',
+                opacity: [0, 1],
+                translateY: [-30, 0],
+                duration: 1000,
+                easing: 'easeOutExpo'
+            });
+
+            anime({
+                targets: '.mission-header p',
+                opacity: [0, 1],
+                translateY: [20, 0],
+                delay: 300,
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+
+            anime({
+                targets: '.mission-tag',
+                scale: [0.8, 1],
+                opacity: [0, 1],
+                delay: 600,
+                duration: 600,
+                easing: 'easeOutElastic'
+            });
+
+            // Pulsing status indicators
+            setInterval(() => {
+                anime({
+                    targets: '.status-indicator',
+                    scale: [1, 1.2],
+                    direction: 'alternate',
+                    duration: 1000,
+                    easing: 'easeInOutSine'
+                });
+            }, 2000);
+
+            // Subtle floating animation for cards
+            setInterval(() => {
+                anime({
+                    targets: '.card',
+                    translateY: [0, -5],
+                    direction: 'alternate',
+                    duration: 3000,
+                    easing: 'easeInOutSine',
+                    delay: anime.stagger(200)
+                });
+            }, 5000);
+        });
+    </script>
+{% endblock %}

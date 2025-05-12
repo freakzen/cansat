@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNOX Cansat Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <style>
+        :root {
+            --nav-bg: #0a0e17;
+            --nav-text: #ecf0f1;
+            --nav-accent: #00ff9d;
+            --nav-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            --max-width: 1400px;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .navbar {
+            display: flex;
+            background-color: var(--nav-bg);
+            padding: 0;
+            box-shadow: var(--nav-shadow);
+            position: relative;
+            z-index: 1000;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .nav-container {
+            display: flex;
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .nav-links li {
+            position: relative;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .nav-links a {
+            color: var(--nav-text);
+            text-decoration: none;
+            padding: 1rem 0;
+            display: block;
+            transition: all 0.3s ease;
+            position: relative;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+        }
+        
+        .nav-links a:hover {
+            color: var(--nav-accent);
+            background: rgba(0, 255, 157, 0.05);
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background-color: var(--nav-accent);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-links a.active::after,
+        .nav-links a:hover::after {
+            width: 80%;
+        }
+        
+        .nav-links a.active {
+            color: var(--nav-accent);
+            font-weight: bold;
+        }
+        
+        .navbar-header {
+            color: var(--nav-accent);
+            padding: 1rem 1.5rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            border-right: 1px solid rgba(0, 255, 157, 0.2);
+            min-width: 150px;
+        }
+        
+        .main-content {
+            flex: 1;
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .navbar-header {
+                min-width: 100px;
+                padding: 1rem;
+                font-size: 1rem;
+            }
+            
+            .nav-links a {
+                font-size: 0.8rem;
+                padding: 1rem 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-header {
+                display: none;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+            }
+            
+            .nav-links li {
+                flex: 1 0 50%;
+            }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="navbar-header">
+                <h2>KNOX</h2>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a></li>
+                <li><a href="{{ url_for('console') }}" class="nav-link">Console</a></li>
+                <li><a href="{{ url_for('status') }}" class="nav-link">System Status</a></li>
+                <li><a href="{{ url_for('gyro') }}" class="nav-link">Gyroscope</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set active link based on current page
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+                
+                // Add hover animations
+                link.addEventListener('mouseenter', () => {
+                    anime({
+                        targets: link,
+                        color: [link.classList.contains('active') ? '#00ff9d' : '#ecf0f1', '#00ff9d'],
+                        duration: 200,
+                        easing: 'easeInOutQuad'
+                    });
+                });
+                
+                link.addEventListener('mouseleave', () => {
+                    if (!link.classList.contains('active')) {
+                        anime({
+                            targets: link,
+                            color: ['#00ff9d', '#ecf0f1'],
+                            duration: 200,
+                            easing: 'easeInOutQuad'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNOX - Gyroscope</title>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f7ff;
+            --secondary: #ff00e6;
+            --bg-dark: #0a0a1a;
+            --bg-light: #1a1a2e;
+            --text-light: #e0e0ff;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Space Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 247, 255, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 230, 0.05) 0%, transparent 20%);
+        }
+        
+        .navbar {
+            display: flex;
+            background-color: rgba(10, 10, 26, 0.9);
+            padding: 0.5rem 1rem;
+            box-shadow: 0 2px 20px rgba(0, 247, 255, 0.1);
+            position: relative;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid rgba(0, 247, 255, 0.2);
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            justify-content: space-around;
+        }
+        
+        .nav-links li {
+            position: relative;
+        }
+        
+        .nav-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            display: block;
+            transition: all 0.3s ease;
+            position: relative;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+        
+        .navbar-header {
+            color: var(--primary);
+            padding: 0.75rem 1.5rem;
+            font-weight: bold;
+            margin-right: 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--primary);
+        }
+        
+        .gyro-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
+            letter-spacing: 2px;
+        }
+        
+        .gyro-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+        }
+        
+        #gyro-visualization {
+            width: 500px;
+            height: 500px;
+            position: relative;
+            border-radius: 50%;
+            background: rgba(26, 26, 46, 0.5);
+            border: 2px solid rgba(0, 247, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 247, 255, 0.1),
+                        inset 0 0 20px rgba(0, 247, 255, 0.1);
+            overflow: hidden;
+            perspective: 1000px;
+        }
+        
+        .satellite-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+        
+        .satellite {
+            position: absolute;
+            width: 150px;
+            height: 250px;
+            background: linear-gradient(to bottom, #1a1a2e, #3a3a5e);
+            border-radius: 75px 75px 25px 25px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            box-shadow: 0 0 30px rgba(0, 247, 255, 0.7);
+            border: 1px solid var(--primary);
+            transform-style: preserve-3d;
+        }
+        
+        .satellite::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 30px;
+            background-color: rgba(0, 247, 255, 0.3);
+            border-radius: 15px;
+            bottom: 10px;
+            left: 25px;
+            box-shadow: inset 0 0 15px var(--primary);
+        }
+        
+        .satellite::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 20px var(--secondary);
+        }
+        
+        .satellite .ring {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 247, 255, 0.5);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0, 247, 255, 0.3);
+        }
+        
+        .axis {
+            position: absolute;
+            background: rgba(0, 247, 255, 0.3);
+        }
+        
+        .axis.x {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+        
+        .axis.y {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        
+        .axis.z {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 1px dashed rgba(0, 247, 255, 0.3);
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+        }
+        
+        .gyro-readings {
+            background: rgba(26, 26, 46, 0.7);
+            padding: 2rem;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 247, 255, 0.1);
+            min-width: 300px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .gyro-readings h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+        
+        .reading {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            background: rgba(10, 10, 26, 0.5);
+            border-radius: 5px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .label {
+            font-weight: bold;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .value {
+            font-family: 'Space Mono', monospace;
+            color: var(--secondary);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .gyro-content {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            #gyro-visualization {
+                width: 300px;
+                height: 300px;
+            }
+            
+            .satellite {
+                width: 100px;
+                height: 160px;
+                border-radius: 50px 50px 15px 15px;
+            }
+            
+            .satellite::before {
+                width: 70px;
+                height: 20px;
+                left: 15px;
+            }
+            
+            .satellite .ring {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-header">
+            <h2>KNOX</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a></li>
+            <li><a href="{{ url_for('console') }}" class="nav-link">Console</a></li>
+            <li><a href="{{ url_for('status') }}" class="nav-link">System Status</a></li>
+            <li><a href="{{ url_for('gyro') }}" class="nav-link active">Gyroscope</a></li>
+        </ul>
+    </nav>
+
+    <div class="stars" id="stars"></div>
+
+    <div class="gyro-container">
+        <h1>GYROSCOPE VISUALIZATION</h1>
+        
+        <div class="gyro-content">
+            <!-- 3D Visualization Container -->
+            <div id="gyro-visualization">
+                <div class="axis x"></div>
+                <div class="axis y"></div>
+                <div class="axis z"></div>
+                <div class="satellite-container">
+                    <div class="satellite" id="satellite">
+                        <div class="ring"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gyroscope Readings -->
+            <div class="gyro-readings">
+                <h2>GYROSCOPE READINGS (DEG)</h2>
+                <div class="reading">
+                    <span class="label">X:</span>
+                    <span class="value" id="gyroX">0.00</span>
+                </div>
+                <div class="reading">
+                    <span class="label">Y:</span>
+                    <span class="value" id="gyroY">0.00</span>
+                </div>
+                <div class="reading">
+                    <span class="label">Z:</span>
+                    <span class="value" id="gyroZ">0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create stars background
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.width = `${Math.random() * 3}px`;
+                star.style.height = star.style.width;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.setProperty('--duration', `${5 + Math.random() * 10}s`);
+                starsContainer.appendChild(star);
+            }
+            
+            // Gyroscope elements
+            const satellite = document.getElementById('satellite');
+            const gyroX = document.getElementById('gyroX');
+            const gyroY = document.getElementById('gyroY');
+            const gyroZ = document.getElementById('gyroZ');
+            
+            // Function to update gyro visualization
+            function updateGyroData(data) {
+                if (!data.MPU_GyroX || !data.MPU_GyroY || !data.MPU_GyroZ) return;
+                
+                // Convert from rad/s to deg/s if needed
+                // (Assuming data is already in degrees, remove if not needed)
+                const x = data.MPU_GyroX; // * (180/Math.PI);
+                const y = data.MPU_GyroY; // * (180/Math.PI);
+                const z = data.MPU_GyroZ; // * (180/Math.PI);
+                
+                // Update display
+                gyroX.textContent = x.toFixed(2);
+                gyroY.textContent = y.toFixed(2);
+                gyroZ.textContent = z.toFixed(2);
+                
+                // Apply 3D transformations
+                const transform = `
+                    translate(-50%, -50%)
+                    rotateX(${x}deg)
+                    rotateY(${y}deg)
+                    rotateZ(${z}deg)
+                `;
+                satellite.style.transform = transform;
+                
+                // Add color effect based on rotation
+                const intensityX = Math.abs(x) / 20;
+                const intensityY = Math.abs(y) / 20;
+                const intensityZ = Math.abs(z) / 360;
+                
+                satellite.style.boxShadow = `
+                    0 0 ${10 + intensityX * 20}px rgba(0, 247, 255, ${0.5 + intensityX * 0.5}),
+                    0 0 ${5 + intensityY * 10}px rgba(255, 0, 230, ${0.3 + intensityY * 0.7}),
+                    0 0 ${15 + intensityZ * 30}px rgba(255, 255, 255, ${intensityZ})
+                `;
+            }
+            
+            // Fetch latest gyro data
+            function fetchGyroData() {
+                fetch('/api/latest')  // Update this endpoint to match your API
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        updateGyroData(data);
+                    })
+                    .catch(error => console.error('Error fetching gyro data:', error));
+            }
+            
+            // Initial load and periodic updates
+            fetchGyroData();
+            setInterval(fetchGyroData, 1000);  // Update every second
+            
+            // Navbar animations
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('mouseenter', () => {
+                    anime({
+                        targets: link,
+                        color: [link.classList.contains('active') ? '#00f7ff' : '#e0e0ff', '#ff00e6'],
+                        duration: 300,
+                        easing: 'easeInOutQuad'
+                    });
+                });
+                
+                link.addEventListener('mouseleave', () => {
+                    anime({
+                        targets: link,
+                        color: ['#ff00e6', link.classList.contains('active') ? '#00f7ff' : '#e0e0ff'],
+                        duration: 300,
+                        easing: 'easeInOutQuad'
+                    });
+                });
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+        const gyroX = document.getElementById('gyroX');
+        const gyroY = document.getElementById('gyroY');
+        const gyroZ = document.getElementById('gyroZ');
+
+        function updateGyroscope() {
+            fetch('/api/latest')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+
+                    const x = parseFloat(data["MPU_GyroX(rad/s)"] || 0);
+                    const y = parseFloat(data["MPU_GyroY(rad/s)"] || 0);
+                    const z = parseFloat(data["MPU_GyroZ(rad/s)"] || 0);
+
+                    // Update UI
+                    gyroX.textContent = x.toFixed(2);
+                    gyroY.textContent = y.toFixed(2);
+                    gyroZ.textContent = z.toFixed(2);
+
+                    // Optional: animate satellite based on gyro
+                    const satellite = document.getElementById('satellite');
+                    if (satellite) {
+                        satellite.style.transform = `
+                            translate(-50%, -50%)
+                            rotateX(${x * 10}deg)
+                            rotateY(${y * 10}deg)
+                            rotateZ(${z * 10}deg)
+                        `;
+                    }
+                })
+                .catch(err => console.error('Error fetching gyro data:', err));
+        }
+
+        // Initial fetch and interval
+        updateGyroscope();
+        setInterval(updateGyroscope, 1000);
+    });
+    </script>
+</body>
+</html>

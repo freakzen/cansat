@@ -1,0 +1,8 @@
+{
+    "fields": [
+        { "name": "time" },
+        { "name": "gyro_x" },
+        { "name": "gyro_y" },
+        { "name": "gyro_z" }
+    ]
+}

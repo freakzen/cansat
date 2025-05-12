@@ -1,0 +1,37 @@
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.graphs-card {
+    height: 300px;
+}
+
+.map-card {
+    grid-column: 1 / -1; /* Span full width */
+    height: 500px; /* Increased map height */
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    border-radius: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .graphs-card, .map-card {
+        height: 300px;
+    }
+}

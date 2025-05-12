@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <style>
+        :root {
+            --console-primary: #00ff9d;
+            --console-bg: #0a0e17;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            margin: 0;
+            min-height: 100vh;
+            background: var(--console-bg);
+            color: var(--console-primary);
+            overflow: hidden;
+        }
+
+        /* Console Container */
+        .console-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .console-container h1 {
+            font-size: 1.8rem;
+            color: var(--console-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--console-primary);
+        }
+
+        /* Console Content */
+        .console-content {
+            background: rgba(10, 14, 23, 0.8);
+            border: 1px solid rgba(0, 255, 157, 0.2);
+            flex-grow: 1;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        /* Console Output */
+        #console-output {
+            background: transparent;
+            color: var(--console-primary);
+            padding: 1.5rem;
+            height: calc(100% - 3rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre;
+            tab-size: 2;
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 157, 0.1);
+            border-top: 1px solid rgba(0, 255, 157, 0.2);
+            font-size: 0.8rem;
+        }
+
+        /* Scrollbar */
+        #console-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #console-output::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        #console-output::-webkit-scrollbar-thumb {
+            background: var(--console-primary);
+            border-radius: 4px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .console-container {
+                padding: 1rem;
+            }
+            
+            #console-output {
+                padding: 1rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="console-container">
+    <h1>CANSA<span>T</span> DATA STREAM</h1>
+    <div class="console-content">
+        <pre id="console-output">{{ raw_data }}</pre>
+        <div class="status-bar">
+            <span>● Database Connection</span>
+            <span>Last fetched: {{ timestamp }}</span>
+            <span>{{ record_count }} records</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======================
+    // Particle Background
+    // ======================
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '-1';
+    canvas.style.opacity = '0.3';
+    document.body.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Create binary particles
+    const particles = [];
+    const particleCount = Math.floor(window.innerWidth / 10);
+    
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 1.5 + 0.5,
+            speed: Math.random() * 0.5 + 0.1,
+            value: Math.round(Math.random()) // 0 or 1
+        });
+    }
+    
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0, 255, 157, 0.15)';
+        
+        particles.forEach(p => {
+            p.y += p.speed;
+            if (p.y > canvas.height) {
+                p.y = 0;
+                p.x = Math.random() * canvas.width;
+            }
+            
+            ctx.font = ${p.size}rem 'Space Mono';
+            ctx.fillText(p.value, p.x, p.y);
+        });
+        
+        requestAnimationFrame(animateParticles);
+    }
+    
+    animateParticles();
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    // ======================
+    // Console Data Handler
+    // ======================
+    const MAX_ROWS = 50;
+    let dataBuffer = [];
+    let connectionRetries = 0;
+    const MAX_RETRIES = 5;
+
+    function formatValue(value) {
+        if (value === null || value === undefined || value === 'NaN') return 'NULL';
+        if (typeof value === 'number') return value.toFixed(2);
+        return String(value);
+    }
+
+    function updateStatusBar(count, timestamp) {
+        document.getElementById('data-count').textContent = ${count} records loaded;
+        document.getElementById('last-update').textContent = Last update: ${timestamp};
+        document.getElementById('connection-status').innerHTML = '● <span style="color: #00ff9d">Connected</span>';
+    }
+
+    function updateConsole() {
+    fetch('/api/data')
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text(); // Get raw text first to handle NaN
+        })
+        .then(text => {
+            connectionRetries = 0; // Reset retry counter on success
+            
+            // Sanitize NaN values before parsing
+            const sanitized = text.replace(/"NaN"/g, 'null');
+            const data = JSON.parse(sanitized);
+            
+            if (data.error) throw new Error(data.error);
+            
+            // Add new data to buffer
+            data.forEach(row => {
+                dataBuffer.push(row);
+            });
+            
+            // Keep only recent data
+            if (dataBuffer.length > MAX_ROWS) {
+                dataBuffer = dataBuffer.slice(-MAX_ROWS);
+            }
+            
+            // Generate raw data output
+            let output = '';
+            if (dataBuffer.length > 0) {
+                // Display raw JSON data with indentation
+                output = JSON.stringify(dataBuffer, null, 2);
+                
+                // Alternative: Display as comma-separated values
+                // output = dataBuffer.map(row => 
+                //     Object.values(row).join(', ')
+                // ).join('\n');
+            }
+            
+            document.getElementById('console-output').textContent = output;
+            updateStatusBar(dataBuffer.length, new Date().toLocaleTimeString());
+        })
+        .catch(error => {
+            connectionRetries++;
+            const statusElem = document.getElementById('connection-status');
+            
+            if (connectionRetries > MAX_RETRIES) {
+                statusElem.innerHTML = '● <span style="color: #ff5555">Connection lost</span>';
+            } else {
+                statusElem.innerHTML = '● <span style="color: #ffaa00">Reconnecting...</span>';
+            }
+            
+            document.getElementById('console-output').textContent = `ERROR: ${error.message}\n\nRetrying in 3 seconds...`;
+            console.error('Fetch error:', error);
+        });
+}
+
+    // Initial load and periodic updates
+    updateConsole();
+    const updateInterval = setInterval(updateConsole, 3000);
+
+    // Auto-scroll to bottom when new data arrives
+    const consoleOutput = document.getElementById('console-output');
+    const observer = new MutationObserver(() => {
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    });
+    observer.observe(consoleOutput, { childList: true });
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+/* Main container */
+.gyro-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #e0e0e0;
+}
+
+/* Content layout */
+.gyro-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+/* 3D Viewer container */
+#cansatContainer {
+    flex: 1;
+    min-width: 300px;
+    height: 500px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Gyroscope readings panel */
+.gyro-readings {
+    flex: 0 0 300px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.gyro-readings h2 {
+    color: #4CAF50;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.reading {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.label {
+    color: #aaaaaa;
+}
+
+.value {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .gyro-content {
+        flex-direction: column;
+    }
+    
+    #cansatContainer {
+        height: 400px;
+        width: 100%;
+    }
+    
+    .gyro-readings {
+        width: 100%;
+    }
+}

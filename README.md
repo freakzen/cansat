@@ -33,3 +33,37 @@ Whether you're simulating or actually interfacing with sensor modules (via seria
 
 ## 📂 File Structure
 
+│
+├── app.py # 🚦 Flask app for routing and data handling
+├── requirements.txt # 📦 Project dependencies
+├── data/
+│ └── sheet.csv # 📊 Logged CanSat telemetry data
+├── static/
+│ ├── dashboard.js # 📈 Dashboard animations and interactivity
+│ ├── console.js # 💻 Live console updates
+│ └── [*.css / *.js] # 🎨 UI styles and scripts
+
+
+
+| Route        | Description                  |
+| ------------ | ---------------------------- |
+| `/`          | Welcome page                 |
+| `/console`   | Live console logs            |
+| `/dashboard` | Gyroscope and pressure graph |
+| `/gyro`      | Accelerometer visualizer     |
+
+🧑‍🚀 Team Knox
+Made by dreamers, tinkerers, and engineers aiming for the stars.
+🌍 Proud participant in the CanSat Competition hosted by KLE Technological University.
+
+📜 License
+This mission control software is open-source under the MIT License.
+
+🌌 “Don’t just shoot for the moon. Build the satellite that gets you there.”
+
+Happy Launching!
+– Team Knox 🚀
+
+
+
+
